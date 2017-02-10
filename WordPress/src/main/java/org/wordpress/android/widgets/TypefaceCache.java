@@ -31,22 +31,7 @@ public class TypefaceCache {
         }
 
         if (family == FAMILY_MERRIWEATHER) {
-            final String typefaceName;
-            switch (fontStyle) {
-                case Typeface.BOLD:
-                    typefaceName = "Merriweather-Bold.ttf";
-                    break;
-                case Typeface.ITALIC:
-                    typefaceName = "Merriweather-Italic.ttf";
-                    break;
-                case Typeface.BOLD_ITALIC:
-                    typefaceName = "Merriweather-BoldItalic.ttf";
-                    break;
-                default:
-                    typefaceName = "Merriweather-Regular.ttf";
-                    break;
-            }
-            return getTypefaceForTypefaceName(context, typefaceName);
+            return Typeface.create("serif", fontStyle);
         }
 
 
