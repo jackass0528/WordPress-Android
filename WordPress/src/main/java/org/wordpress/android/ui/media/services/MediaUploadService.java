@@ -22,10 +22,12 @@ import org.wordpress.android.models.MediaUploadState;
 import org.wordpress.android.util.AppLog;
 import org.wordpress.android.util.AppLog.T;
 import org.wordpress.android.util.StringUtils;
+import org.wordpress.android.util.helpers.Debouncer;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
@@ -37,6 +39,8 @@ public class MediaUploadService extends Service {
     public static final String SITE_KEY = "mediaSite";
     public static final String LISTENER_KEY = "mediaUploadListener";
     public static final String MEDIA_LIST_KEY = "mediaList";
+
+    private Debouncer mDebouncer = new Debouncer();
 
     public interface MediaUploadListener extends Serializable {
         void onUploadBegin(MediaModel media);
@@ -144,7 +148,7 @@ public class MediaUploadService extends Service {
     private void handleOnMediaUploadedSuccess(@NonNull OnMediaUploaded event) {
         if (event.canceled) {
             // Upload canceled
-            AppLog.i(T.MEDIA, "Upload successfully canceled.");
+            AppLog.i(T.MEDIA, "Upload successfully canceled - localId=" + event.media.getId());
             if (mListener != null) {
                 mListener.onUploadCanceled(event.media);
             }
@@ -296,9 +300,7 @@ public class MediaUploadService extends Service {
     // FluxC events
 
 
-    @SuppressWarnings("unused")
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void onMediaUploaded(OnMediaUploaded event) {
+    public void debouncedOnMediaUploaded(OnMediaUploaded event) {
         // event for unknown media, ignoring
         if (event.media == null || !matchesInProgressMedia(event.media)) {
             AppLog.w(T.MEDIA, "Media event not recognized: " + event.media);
@@ -310,5 +312,15 @@ public class MediaUploadService extends Service {
         } else {
             handleOnMediaUploadedSuccess(event);
         }
+    }
+
+    @SuppressWarnings("unused")
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onMediaUploaded(final OnMediaUploaded event) {
+        mDebouncer.debounce(Void.class, new Runnable() {
+            @Override public void run() {
+                debouncedOnMediaUploaded(event);
+            }
+        }, 100, TimeUnit.MILLISECONDS);
     }
 }
